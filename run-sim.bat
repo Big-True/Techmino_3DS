@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul 2>&1
 setlocal
+cd /d "%~dp0"
 
 set LOVE_EXE=C:\Program Files\LOVE\love.exe
 
@@ -25,4 +26,4 @@ echo   Backspace  = Select
 echo   Mouse click on bottom screen = Touch
 echo   Scroll wheel = 3D depth slider
 echo.
-start "" "%LOVE_EXE%" build\sim-test
+start "Techmino3DS" /D "%~dp0build\sim-test" "%LOVE_EXE%" .
