@@ -41,6 +41,12 @@ del /Q build\game\parts\shaders\*.glsl 2>nul
 if exist port\parts\scenes (
     for %%f in (port\parts\scenes\*.lua) do copy /Y "%%f" build\game\parts\scenes\ >nul
 )
+if exist port\parts\backgrounds (
+    for %%f in (port\parts\backgrounds\*.lua) do copy /Y "%%f" build\game\parts\backgrounds\ >nul
+)
+if exist port\parts\player (
+    for %%f in (port\parts\player\*.lua) do copy /Y "%%f" build\game\parts\player\ >nul
+)
 if exist port\Zframework (
     for %%f in (port\Zframework\*.lua) do (
         if not "%%~nxf"=="init_3ds_patch.lua" copy /Y "%%f" build\game\Zframework\ >nul
@@ -65,11 +71,13 @@ mkdir build\sim-test 2>nul
 echo   Copying merged game files...
 xcopy /E /I /Y build\game build\sim-test >nul 2>&1
 
+REM Save game's original main.lua before overwriting
+copy /Y build\sim-test\main.lua build\sim-test\game_main.lua >nul
+
 echo   Copying nest library...
 xcopy /E /I /Y nest\nest build\sim-test\nest >nul 2>&1
 
 echo   Installing sim-test wrapper files...
-copy /Y sim-test\conf.lua build\sim-test\conf.lua >nul
 copy /Y sim-test\main.lua build\sim-test\main.lua >nul
 
 echo   SIM build complete: build\sim-test\

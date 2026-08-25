@@ -114,6 +114,16 @@ for _,v in next,fs.getDirectoryItems('parts/shaders') do
         end
     end
 end
+-- 3DS: ensure all expected shader names exist (game code accesses them directly)
+-- Create a dummy shader-like object that accepts :send() calls silently
+local _dummyShader=setmetatable({},{__index=function(_,k)
+    if k=='send' then return function() end end
+    if k=='getWarnings' then return function() return '' end end
+    return function() end
+end})
+for _,name in next,{'alpha','lighter','blockSatur','fieldSatur','grad1','grad2','rgb1','rgb2','aura','warning'} do
+    if not SHADER[name] then SHADER[name]=_dummyShader end
+end
 
 -- Load modules
 CHAR=require'parts.char'

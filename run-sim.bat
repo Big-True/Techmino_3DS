@@ -1,13 +1,12 @@
 @echo off
-REM run-sim.bat — Launch the 3DS simulation test
-REM Usage: run-sim.bat
-REM Requires: LÖVE 11.5 installed at C:\Program Files\LOVE\love.exe
+chcp 65001 >nul 2>&1
+setlocal
 
 set LOVE_EXE=C:\Program Files\LOVE\love.exe
 
 if not exist "%LOVE_EXE%" (
-    echo ERROR: LÖVE not found at %LOVE_EXE%
-    echo Install LÖVE 11.5 from https://love2d.org
+    echo ERROR: LOVE not found at %LOVE_EXE%
+    echo Install LOVE 11.5 from https://love2d.org
     exit /b 1
 )
 

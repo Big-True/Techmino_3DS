@@ -42,21 +42,45 @@ if not gc.ellipse then
     end
 end
 
--- newShader / setShader: ABSENT
-if not gc.newShader then
-    local dummyShader = setmetatable({}, {
-        __index = function(self, k)
-            if k == 'send' then return function() end end
-            if k == 'getWarnings' then return function() return '' end end
-            return function() end
-        end
-    })
-    function gc.newShader()
-        return dummyShader
+-- newShader: wrap to handle no-argument calls gracefully
+-- On desktop LÖVE, newShader exists but requires a string argument.
+-- On 3DS, newShader is ABSENT entirely.
+-- Either way, we need to handle calls like `SHADER[name] = newShader()`.
+local _dummyShader = setmetatable({}, {
+    __index = function(_, k)
+        if k == 'send' then return function() end end
+        if k == 'getWarnings' then return function() return '' end end
+        return function() end
     end
+})
+
+if gc.newShader then
+    -- Desktop LÖVE: wrap the real function to handle missing args
+    local realNewShader = gc.newShader
+    gc.newShader = function(code, ...)
+        if code then
+            local ok, result = pcall(realNewShader, code, ...)
+            if ok then return result end
+        end
+        return _dummyShader
+    end
+else
+    -- 3DS: no newShader at all
+    function gc.newShader() return _dummyShader end
 end
 
-if not gc.setShader then
+-- setShader: wrap to handle dummy shader objects (tables, not real Shader userdata)
+-- On desktop LÖVE, setShader requires a real Shader userdata or nil.
+-- Our dummy shaders are tables — pass nil to setShader for those.
+local realSetShader = gc.setShader
+if realSetShader then
+    gc.setShader = function(shader)
+        if shader ~= nil and type(shader) ~= 'userdata' then
+            shader = nil -- dummy shader, treat as "no shader"
+        end
+        return realSetShader(shader)
+    end
+else
     function gc.setShader() end
 end
 
