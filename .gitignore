@@ -1,0 +1,28 @@
+# Build output
+build/
+*.3dsx
+*.elf
+*.smdh
+*.love
+core.love
+
+# Upstream repos (reference only)
+Techmino/
+lovepotion/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# Runtime
+Techmino/conf/
+Techmino/record/
+Techmino/replay/
+Techmino/cache/
+Techmino/lib/
