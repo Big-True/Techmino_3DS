@@ -2,75 +2,94 @@
 
 Port of [Techmino](https://github.com/26F-Studio/Techmino) (LÖVE 11.5 Tetris game) to Nintendo 3DS via [LovePotion](https://github.com/lovebrew/lovepotion) 3.0.2.
 
+## Quick Start
+
+```sh
+# 1. Build simulation test (runs on desktop LÖVE with nest)
+build.bat sim
+
+# 2. Run simulation test
+run-sim.bat
+# Or: "C:\Program Files\LOVE\love.exe" build\sim-test
+
+# 3. Build .3dsx for real 3DS hardware
+build.bat 3dsx
+# Output: build\Techmino_3DS.3dsx → copy to SD card, launch via Homebrew Launcher
+```
+
+## Build Targets
+
+| Command | Output | Description |
+|---------|--------|-------------|
+| `build.bat sim` | `build\sim-test\` | Simulation test (desktop LÖVE + nest library) |
+| `build.bat love` | `build\Techmino_3DS.love` | .love package for LovePotion |
+| `build.bat 3dsx` | `build\Techmino_3DS.3dsx` | .3dsx homebrew package (auto-downloads LovePotion if needed) |
+| `build.bat` | All of the above | Full build |
+
 ## Architecture
 
 ```
 Techmino_3DS/
-├── Techmino/          ← upstream source (git submodule, read-only)
-├── lovepotion/        ← upstream runtime (git submodule, read-only)
-├── port/              ← 3DS port modifications
-│   ├── compat.lua     ← API compatibility shim (patches missing LovePotion APIs)
-│   ├── conf.lua       ← ported conf.lua (3DS platform detection)
-│   ├── main.lua       ← ported main.lua (jit/shader/discord guards)
-│   ├── build.lua      ← build script (Lua version)
-│   └── parts/         ← stubbed/modified game modules
-├── build.bat          ← Windows build script
-├── build/             ← build output (gitignored)
-└── AGENTS.md          ← agent guide for this port
+├── Techmino/          ← upstream source (submodule, read-only)
+├── lovepotion/        ← upstream runtime (submodule, read-only)
+├── nest/              ← LovePotion compatibility layer (submodule, read-only)
+├── port/              ← 3DS port modifications (ALL changes go here)
+│   ├── compat.lua     ← API shim (30+ missing LovePotion APIs)
+│   ├── conf.lua       ← 3DS platform detection
+│   ├── main.lua       ← jit/shader/discord guards
+│   └── parts/         ← stubbed modules (discordRPC, shaders)
+├── sim-test/          ← Simulation test wrapper (uses nest)
+├── build.bat          ← Build script (sim/love/3dsx)
+├── run-sim.bat        ← Launch simulation test
+├── AGENTS.md          ← Comprehensive porting guide
+└── README.md          ← This file
 ```
 
-## How It Works
+## Simulation Testing
 
-1. **`port/compat.lua`** — Loaded first by `conf.lua`. Patches all missing LovePotion APIs:
-   - `love.mouse` (module ABSENT on 3DS) — creates stub with `isDown=false`, `getPosition=0,0`
-   - `love.graphics.newShader/setShader` — returns dummy objects
-   - `love.graphics.stencil/setStencilTest` — no-ops
-   - `love.graphics.ellipse` — approximated with circle
-   - `love.graphics.newText` → redirects to `newTextBatch`
-   - `love.graphics.setNewFont` → shimmed with .otf fallback to system fonts
-   - `love.graphics.getDPIScale` → returns 1
-   - `love.graphics.captureScreenshot/discard` — no-ops
-   - `love.window.isMinimized/getSafeArea/setFullscreen` — stubs
-   - `love.keyboard.isDown/setKeyRepeat` — stubs
-   - `love.system.openURL/vibrate/clipboard` — stubs
-   - `love.filesystem.newFile` → redirects to `openFile`
-   - `love.math.noise` → redirects to `perlinNoise`
-   - `jit` table — stubbed (Lua 5.1 without JIT on 3DS)
-   - `parts.discordRPC` — preloaded as no-op (requires LuaJIT FFI)
+Uses the official [nest](https://github.com/lovebrew/nest) library for LovePotion simulation on desktop LÖVE. The nest library provides:
 
-2. **`port/conf.lua`** — Replaces upstream. Adds `HANDHELD` flag for 3DS, disables mouse module, sets vsync=1, 400×240.
+- Dual-screen window layout (400×240 top + 320×240 bottom)
+- Keyboard → 3DS gamepad emulation
+- Mouse on bottom screen → touch input simulation
+- 3D depth slider (scroll wheel)
+- Console-specific API adjustments
 
-3. **`port/main.lua`** — Replaces upstream. Guards `jit.*` references, `pcall`-wraps shader loading, enables virtual keys by default.
+When running on actual 3DS hardware, nest's `init()` is a no-op — the same code works on both desktop and 3DS.
 
-4. **Build script** (`build.bat`) — Merges `port/` over `Techmino/` into `build/game/`, removes `.glsl` shaders, creates `.love` package.
+### Controls (Simulation)
 
-## Building
+| Key | 3DS Button |
+|-----|-----------|
+| Arrow keys | D-Pad |
+| Z / X / A / S | A / B / X / Y |
+| Q / W | L / R shoulders |
+| Enter | Start |
+| Backspace | Select |
+| Mouse click (bottom screen) | Touch |
+| Scroll wheel | 3D depth slider |
 
-```sh
-# Build .love package
-build.bat
+## 3DS Package
 
-# Build LovePotion for 3DS (requires devkitPro Docker)
-cd lovepotion
-catnip -T 3DS -DLIBRARY_LOADER='linktime' -DUSE_CURL_BACKEND=ON
+The `.3dsx` file is created by concatenating `lovepotion.3dsx` (LovePotion runtime) with the game's `.love` archive:
 
-# Combine into .3dsx
-copy /B lovepotion\build\lovepotion.3dsx + build\Techmino_3DS.love build\Techmino_3DS.3dsx
 ```
+lovepotion.3dsx + Techmino_3DS.love → Techmino_3DS.3dsx
+```
+
+Copy `Techmino_3DS.3dsx` to the 3DS SD card and launch via the Homebrew Launcher.
 
 ## Current Status
 
-### Working (via compat.lua shim)
-- Platform detection (`HANDHELD` flag)
-- All missing API stubs (mouse, shaders, window, keyboard, system)
-- Font loading fallback (.otf → system fonts)
-- Build pipeline (.love packaging)
+### Working
+- Platform detection (`HANDHELD` flag, `love._os = "Horizon"`)
+- API compatibility shim (30+ missing APIs patched)
+- Simulation test via nest library
+- Build pipeline (.love + .3dsx packaging)
+- Pre-built LovePotion auto-download for .3dsx
 
-### Not Yet Implemented
-- Dual-screen rendering (top screen game, bottom screen touch controls)
+### In Progress
+- Dual-screen rendering adaptation
 - Resolution scaling (1280×720 → 400×240)
 - 3DS gamepad input mapping
 - Virtual key layout for touch screen
-- Stencil operation alternatives
-- Canvas memory optimization
-- Audio optimization (reduced sources, no filters)
